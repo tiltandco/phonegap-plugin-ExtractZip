@@ -1,5 +1,6 @@
 package org.apache.cordova.plugin.ExtractZip;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,14 +17,23 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.apache.cordova.*;
 
+
 import android.content.Context;
+import android.os.Environment;
+import android.util.Log;
 
 /**
  * @author Evgeniy Lukovsky
- *
+ * 
  */
+
+/*
+	Mearged with code from  Vishal Rajpal to allow for creation of directories that don't exsit 
+ 	Author: Ryan OConnell
+ 	Company: Tilt and Co
+*/
 public class ExtractZipPlugin extends CordovaPlugin {
-	public enum Action{
+	public enum Action {
 		extract, getTempDir
 	}
 
@@ -32,32 +42,50 @@ public class ExtractZipPlugin extends CordovaPlugin {
 	 * @param out
 	 * @throws IOException
 	 */
-	public static final void copyInputStream(InputStream in, OutputStream out) throws IOException
-	{
+	public static final void copyInputStream(InputStream in, OutputStream out)
+			throws IOException {
 		byte[] buffer = new byte[65536];
 		int len;
 
-		while((len = in.read(buffer)) >= 0)
+		while ((len = in.read(buffer)) >= 0)
 			out.write(buffer, 0, len);
 	}
 
-
-	/* (non-Javadoc)
-	 * @see org.apache.cordova.CordovaPlugin#execute(java.lang.String, org.json.JSONArray, org.apache.cordova.CallbackContext)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.apache.cordova.CordovaPlugin#execute(java.lang.String,
+	 * org.json.JSONArray, org.apache.cordova.CallbackContext)
 	 */
 	@Override
-	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+	public boolean execute(String action, JSONArray args,
+			CallbackContext callbackContext) throws JSONException {
 		System.out.println("ZIP plugin has been started");
 		boolean result = false;
 
-		switch(Action.valueOf(action)){
-		case extract: result = true;
+		switch (Action.valueOf(action)) {
+		case extract:
+			result = true;
 			extractAll(args, callbackContext);
-		break;
-		case getTempDir: result = true;
+			break;
+		case getTempDir:
+			result = true;
 			getTempDir(args, callbackContext);
 		}
 		return result;
+	}
+
+	public static boolean createDirIfNotExists(String path) {
+		boolean ret = true;
+
+		File file = new File(Environment.getExternalStorageDirectory(), path);
+		if (!file.exists()) {
+			if (!file.mkdirs()) {
+				Log.e("TravellerLog :: ", "Problem creating folder");
+				ret = false;
+			}
+		}
+		return ret;
 	}
 
 	/**
@@ -66,69 +94,98 @@ public class ExtractZipPlugin extends CordovaPlugin {
 	 * @return
 	 */
 	private boolean extractAll(JSONArray args, CallbackContext callbackContext) {
+		// TODO Auto-generated method stub
+		Log.v("tag", "### ExtractZipFilePlugin");
+
+		Log.v("tag", "### ExtractZipFilePlugin");
 		try {
 			String filename = args.getString(0);
-			String destDir =  args.getString(1);
-			ZipFile zipFile = new ZipFile(filename);
+			String destination = args.getString(1);
+			Log.v("tag", "### filename: " + filename);
+			Log.v("tag", "### destination: " + destination);
+			createDirIfNotExists(destination);
+			File file = new File(Environment.getExternalStorageDirectory(),
+					filename);
+			// String[] dirToSplit=filename.split(File.separator);
+			// String dirToInsert="";
+			// for(int i=0;i<dirToSplit.length-1;i++)
+			// {
+			// dirToInsert+=dirToSplit[i]+File.separator;
+			// }
+			BufferedOutputStream dest = null;
+			BufferedInputStream is = null;
 			ZipEntry entry;
-			InputStream is = null;
-			BufferedOutputStream os = null;
+			ZipFile zipfile;
 			try {
-				Enumeration<? extends ZipEntry> e = zipFile.entries();
-				while (e.hasMoreElements()) 
-				{
+				zipfile = new ZipFile(file);
+				Enumeration e = zipfile.entries();
+				while (e.hasMoreElements()) {
 					entry = (ZipEntry) e.nextElement();
-					String fileName = destDir.toString() + entry.getName();
-					File outFile = new File(fileName);
-					if (entry.isDirectory()) 
-					{
-						outFile.mkdirs();
-						continue;
-					} 
-					try{ 
-						is = zipFile.getInputStream(entry);
-						os =new BufferedOutputStream(new FileOutputStream(outFile.getAbsolutePath()));
-						copyInputStream(is, os);
+					is = new BufferedInputStream(zipfile.getInputStream(entry),
+							8192);
+					// is = new
+					// BufferedInputStream(zipfile.getInputStream(entry));
+					int count;
+					byte data[] = new byte[102222];
+					String fileName = entry.getName();
+
+					String[] dirToSplit = fileName.split(File.separator);
+					String dirToInsert = "";
+					for (int i = 0; i < dirToSplit.length - 1; i++) {
+						dirToInsert += dirToSplit[i] + File.separator;
+						createDirIfNotExists(destination + dirToInsert);
 					}
-					catch(IOException e2){
-						System.out.println("Can't write file.");
-						System.out.println(e2.getMessage());
-						return false;
-					}finally{
-						if(is!=null){
-							is.close();
+
+					File outFile = new File(
+							Environment.getExternalStorageDirectory(),
+							destination + fileName);
+					if (entry.isDirectory()) {
+						outFile.mkdirs();
+					} else {
+						FileOutputStream fos = new FileOutputStream(outFile);
+						dest = new BufferedOutputStream(fos, 102222);
+						while ((count = is.read(data, 0, 102222)) != -1) {
+							dest.write(data, 0, count);
 						}
-						if(os!=null){
-							os.flush();
-							os.close();
-						}
+						dest.flush();
+						dest.close();
+						is.close();
 					}
 				}
+				Log.v("tag", "### success");
+				 callbackContext.success("Succesfully extracted.");
+				return true;
 			} catch (ZipException e1) {
-				System.out.println("ZIP exception");
-				System.out.println(e1.getMessage());
+				// TODO Auto-generated catch block
+				Log.v("tag",
+						"### MALFORMED_URL_EXCEPTION: "
+								+ PluginResult.Status.MALFORMED_URL_EXCEPTION
+										.toString());
+				callbackContext
+						.error(PluginResult.Status.MALFORMED_URL_EXCEPTION
+								.toString());
 				return false;
 			} catch (IOException e1) {
-				System.out.println("IO exception");
-				System.out.println(e1.getMessage());
+				// TODO Auto-generated catch block
+				Log.v("tag", "### IO_EXCEPTION: "
+						+ PluginResult.Status.IO_EXCEPTION.toString());
+				e1.printStackTrace();
+				callbackContext.error(PluginResult.Status.IO_EXCEPTION
+						.toString());
 				return false;
 			}
 
 		} catch (JSONException e) {
-			System.out.println("JSON exception");
-			System.out.println(e.getMessage());
-			return false;
-		} catch (IOException e3) {
-			System.out.println("IO/ZIP exception");
-			System.out.println(e3.getMessage());
+			// TODO Auto-generated catch block
+			Log.v("tag", "### IO_EXCEPTION: "
+					+ PluginResult.Status.JSON_EXCEPTION.toString());
+			callbackContext
+					.error(PluginResult.Status.JSON_EXCEPTION.toString());
 			return false;
 		}
-		System.out.println("All went fine.");
-		callbackContext.success("Succesfully extracted.");
-		return true;
 	}
 
-	private boolean getTempDir(JSONArray args,CallbackContext callbackContext){
+	private boolean getTempDir(JSONArray args, CallbackContext callbackContext) {
 		String dirName;
 		try {
 			dirName = args.getString(0);
@@ -138,7 +195,8 @@ public class ExtractZipPlugin extends CordovaPlugin {
 			return false;
 		}
 		Context appContext = cordova.getActivity().getApplicationContext();
-		String absolutePath = appContext.getDir(dirName, Context.MODE_PRIVATE).getAbsolutePath();
+		String absolutePath = appContext.getDir(dirName, Context.MODE_PRIVATE)
+				.getAbsolutePath();
 		callbackContext.success(absolutePath);
 		return true;
 	}
