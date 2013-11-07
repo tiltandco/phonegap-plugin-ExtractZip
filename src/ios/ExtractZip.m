@@ -13,22 +13,26 @@
 
 - (void)extract:(CDVInvokedUrlCommand *)command
 {
-    NSArray* arguments = command.arguments;
-    
-    NSLog(@"Extract zip has been started.");
-    NSString *file = [arguments objectAtIndex:0];
-    NSString *destination = [arguments objectAtIndex:1];
+   // Run the service in the background
+    [self.commandDelegate runInBackground:^{
+        NSArray* arguments = command.arguments;
+        
+        NSLog(@"Extract zip has been started.");
+        NSString *file = [arguments objectAtIndex:0];
+        NSString *destination = [arguments objectAtIndex:1];
 
-    CDVPluginResult *result;
-    if([SSZipArchive unzipFileAtPath:file toDestination:destination delegate:nil]) {
-        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[destination stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
-        [self writeJavascript:[result toSuccessCallbackString:command.callbackId]];
-        NSLog(@"Success!");
-    } else {
-        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[@"Could not extract archive" stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
-        [self writeJavascript:[result toErrorCallbackString:command.callbackId]];
-        NSLog(@"Error!");
-    }
+        CDVPluginResult *result;
+        if([SSZipArchive unzipFileAtPath:file toDestination:destination delegate:nil]) {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[destination stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+            [self writeJavascript:[result toSuccessCallbackString:command.callbackId]];
+            NSLog(@"Success!");
+        } else {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[@"Could not extract archive" stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+            [self writeJavascript:[result toErrorCallbackString:command.callbackId]];
+            NSLog(@"Error!");
+        }
+
+    }];
 }
 
 - (void)getTempDir:(CDVInvokedUrlCommand *)command
