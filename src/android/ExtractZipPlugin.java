@@ -94,98 +94,95 @@ public class ExtractZipPlugin extends CordovaPlugin {
 	 * @return
 	 */
 	private boolean extractAll(JSONArray args, CallbackContext callbackContext) {
-		// run in background
-		cordova.getThreadPool().execute(new Runnable() {
-			// TODO Auto-generated method stub
-			Log.v("tag", "### ExtractZipFilePlugin");
+		// TODO Auto-generated method stub
+		Log.v("tag", "### ExtractZipFilePlugin");
 
-			Log.v("tag", "### ExtractZipFilePlugin");
+		Log.v("tag", "### ExtractZipFilePlugin");
+		try {
+			String filename = args.getString(0);
+			String destination = args.getString(1);
+			Log.v("tag", "### filename: " + filename);
+			Log.v("tag", "### destination: " + destination);
+			createDirIfNotExists(destination);
+			File file = new File(Environment.getExternalStorageDirectory(),
+					filename);
+			// String[] dirToSplit=filename.split(File.separator);
+			// String dirToInsert="";
+			// for(int i=0;i<dirToSplit.length-1;i++)
+			// {
+			// dirToInsert+=dirToSplit[i]+File.separator;
+			// }
+			BufferedOutputStream dest = null;
+			BufferedInputStream is = null;
+			ZipEntry entry;
+			ZipFile zipfile;
 			try {
-				String filename = args.getString(0);
-				String destination = args.getString(1);
-				Log.v("tag", "### filename: " + filename);
-				Log.v("tag", "### destination: " + destination);
-				createDirIfNotExists(destination);
-				File file = new File(Environment.getExternalStorageDirectory(),
-						filename);
-				// String[] dirToSplit=filename.split(File.separator);
-				// String dirToInsert="";
-				// for(int i=0;i<dirToSplit.length-1;i++)
-				// {
-				// dirToInsert+=dirToSplit[i]+File.separator;
-				// }
-				BufferedOutputStream dest = null;
-				BufferedInputStream is = null;
-				ZipEntry entry;
-				ZipFile zipfile;
-				try {
-					zipfile = new ZipFile(file);
-					Enumeration e = zipfile.entries();
-					while (e.hasMoreElements()) {
-						entry = (ZipEntry) e.nextElement();
-						is = new BufferedInputStream(zipfile.getInputStream(entry),
-								8192);
-						// is = new
-						// BufferedInputStream(zipfile.getInputStream(entry));
-						int count;
-						byte data[] = new byte[102222];
-						String fileName = entry.getName();
+				zipfile = new ZipFile(file);
+				Enumeration e = zipfile.entries();
+				while (e.hasMoreElements()) {
+					entry = (ZipEntry) e.nextElement();
+					is = new BufferedInputStream(zipfile.getInputStream(entry),
+							8192);
+					// is = new
+					// BufferedInputStream(zipfile.getInputStream(entry));
+					int count;
+					byte data[] = new byte[102222];
+					String fileName = entry.getName();
 
-						String[] dirToSplit = fileName.split(File.separator);
-						String dirToInsert = "";
-						for (int i = 0; i < dirToSplit.length - 1; i++) {
-							dirToInsert += dirToSplit[i] + File.separator;
-							createDirIfNotExists(destination + dirToInsert);
-						}
-
-						File outFile = new File(
-								Environment.getExternalStorageDirectory(),
-								destination + fileName);
-						if (entry.isDirectory()) {
-							outFile.mkdirs();
-						} else {
-							FileOutputStream fos = new FileOutputStream(outFile);
-							dest = new BufferedOutputStream(fos, 102222);
-							while ((count = is.read(data, 0, 102222)) != -1) {
-								dest.write(data, 0, count);
-							}
-							dest.flush();
-							dest.close();
-							is.close();
-						}
+					String[] dirToSplit = fileName.split(File.separator);
+					String dirToInsert = "";
+					for (int i = 0; i < dirToSplit.length - 1; i++) {
+						dirToInsert += dirToSplit[i] + File.separator;
+						createDirIfNotExists(destination + dirToInsert);
 					}
-					Log.v("tag", "### success");
-					 callbackContext.success("Succesfully extracted.");
-					return true;
-				} catch (ZipException e1) {
-					// TODO Auto-generated catch block
-					Log.v("tag",
-							"### MALFORMED_URL_EXCEPTION: "
-									+ PluginResult.Status.MALFORMED_URL_EXCEPTION
-											.toString());
-					callbackContext
-							.error(PluginResult.Status.MALFORMED_URL_EXCEPTION
-									.toString());
-					return false;
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					Log.v("tag", "### IO_EXCEPTION: "
-							+ PluginResult.Status.IO_EXCEPTION.toString());
-					e1.printStackTrace();
-					callbackContext.error(PluginResult.Status.IO_EXCEPTION
-							.toString());
-					return false;
-				}
 
-			} catch (JSONException e) {
+					File outFile = new File(
+							Environment.getExternalStorageDirectory(),
+							destination + fileName);
+					if (entry.isDirectory()) {
+						outFile.mkdirs();
+					} else {
+						FileOutputStream fos = new FileOutputStream(outFile);
+						dest = new BufferedOutputStream(fos, 102222);
+						while ((count = is.read(data, 0, 102222)) != -1) {
+							dest.write(data, 0, count);
+						}
+						dest.flush();
+						dest.close();
+						is.close();
+					}
+				}
+				Log.v("tag", "### success");
+				 callbackContext.success("Succesfully extracted.");
+				return true;
+			} catch (ZipException e1) {
+				// TODO Auto-generated catch block
+				Log.v("tag",
+						"### MALFORMED_URL_EXCEPTION: "
+								+ PluginResult.Status.MALFORMED_URL_EXCEPTION
+										.toString());
+				callbackContext
+						.error(PluginResult.Status.MALFORMED_URL_EXCEPTION
+								.toString());
+				return false;
+			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				Log.v("tag", "### IO_EXCEPTION: "
-						+ PluginResult.Status.JSON_EXCEPTION.toString());
-				callbackContext
-						.error(PluginResult.Status.JSON_EXCEPTION.toString());
+						+ PluginResult.Status.IO_EXCEPTION.toString());
+				e1.printStackTrace();
+				callbackContext.error(PluginResult.Status.IO_EXCEPTION
+						.toString());
 				return false;
 			}
-		});
+
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			Log.v("tag", "### IO_EXCEPTION: "
+					+ PluginResult.Status.JSON_EXCEPTION.toString());
+			callbackContext
+					.error(PluginResult.Status.JSON_EXCEPTION.toString());
+			return false;
+		}
 	}
 
 	private boolean getTempDir(JSONArray args, CallbackContext callbackContext) {
