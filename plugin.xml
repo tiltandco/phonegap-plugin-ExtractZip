@@ -6,7 +6,7 @@
     <name>ExtractZip</name>
 
     <js-module src="www/ExtractZip.js" name="ExtractZip">
-        <clobbers target="ExtractZIp" />
+        <clobbers target="ExtractZip" />
     </js-module>
 
     <!-- android -->
